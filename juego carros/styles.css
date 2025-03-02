@@ -1,0 +1,40 @@
+ body {
+            font-family: Arial, sans-serif; /* Fuente general */
+            background-color: #f4f4f4; /* Color de fondo */
+            margin: 0; /* Eliminar márgenes */
+            padding: 0; /* Eliminar relleno */
+        }
+
+        nav {
+            background-color: red; /* Color de fondo del menú */
+            padding: 10px; /* Espaciado interno */
+            text-align: center; /* Centrar el texto */
+        }
+
+        nav a {
+            color: white; /* Color del texto */
+            text-decoration: none; /* Sin subrayado */
+            margin: 0 15px; /* Espaciado entre enlaces */
+            font-size: 20px; /* Tamaño de fuente */
+        }
+
+        nav a:hover {
+            text-decoration: underline; /* Subrayar al pasar el mouse */
+        }
+
+        div {
+            text-align: center; /* Centrar las imágenes */
+            margin-top: 20px; /* Espaciado superior */
+        }
+
+        img {
+            border: 2px solid #ccc; /* Borde de las imágenes */
+            border-radius: 10px; /* Bordes redondeados */
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1); /* Sombra de las imágenes */
+            transition: transform 0.2s; /* Transición suave */
+        }
+
+        img:hover {
+            transform: scale(1.05); /* Aumentar tamaño al pasar el mouse */
+        }
+        

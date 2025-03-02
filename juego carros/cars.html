@@ -1,0 +1,328 @@
+<!doctype html>
+<html lang="en-US">
+
+<head>
+    <meta charset="utf-8" />
+    <title>CarCrash2</title>
+    <style>
+    </style>
+    <script src="js/phaser.min.js"></script>
+    <link rel="stylesheet" href="styles.css">
+</head>
+
+<body>
+    <script>
+        //ancho, alto de la pantalla
+        var game = new Phaser.Game(1760, 940, Phaser.AUTO, null, {
+            preload: preload,
+            create: create,
+            update: update
+        });
+
+        var fondo;
+
+        let paddle;
+        let bricks;
+        let newBrick;
+        let brickInfo;
+        let scoreText;
+        let score = 0;
+        let lives = 3;
+        let line;
+        let livesText;
+        let speedText;
+        let lifeLostText;
+        let playing = true;
+
+        let fondo1, fondo2; // Variables para los fondos
+        let fondoSpeed = 0; // Velocidad de movimiento del fondo
+
+        function preload() {
+
+            game.scale.scaleMode = Phaser.ScaleManager.SHOW_ALL;
+            game.scale.pageAlignHorizontally = true;
+            game.scale.pageAlignVertically = true;
+            game.stage.backgroundColor = '#eee';
+
+            game.load.image('fondo', 'img/highway.png');
+            game.load.image('line', 'img/start-line.png');
+            game.load.image("paddle", "img/carro1.png");
+
+            game.load.image("carro1", "img/carro2.png");
+            game.load.image("carro2", "img/carro3.png");
+            game.load.image("carro3", "img/carro4.png");
+            game.load.image("carro4", "img/carro5.png");
+
+            game.load.audio('sfx:drift', 'audio/drift.mp3');
+            game.load.audio('sfx:explosion', 'audio/explosion.mp3');
+            game.load.audio('bgm', 'audio/fightscene.mp3');
+            game.load.audio('guitar', 'audio/guitar.mp3');
+
+        }
+
+        function create() {
+            this.sfx = {
+                drift: this.game.add.audio('sfx:drift'),
+                explosion: this.game.add.audio('sfx:explosion'),
+            };
+            this.bgm = this.game.add.audio('bgm');
+            this.bgm.loopFull();
+            this.bgm.volume = 3;
+            this.guitar = this.game.add.audio('guitar');
+            this.guitar.loopFull();
+            this.guitar.volume = 0.7;
+
+            game.physics.startSystem(Phaser.Physics.ARCADE);
+            // Cargar las imágenes de fondo
+            fondo1 = game.add.sprite(0, 0, 'fondo');
+            fondo2 = game.add.sprite(0, fondo1.height, 'fondo'); // Colocar el segundo fondo a la derecha del primero
+
+            // Configurar el fondo para que se mueva
+            fondo1.anchor.set(0, 0);
+            fondo2.anchor.set(0, 0);
+
+            // Crear la paleta
+            paddle = game.add.sprite(
+                game.world.width / 2,
+                game.world.height /2, // altura a la que está la paleta
+                "paddle",
+            );
+            paddle.anchor.set(0.5, 1);
+            game.physics.enable(paddle, Phaser.Physics.ARCADE);
+            paddle.body.immovable = true;
+            // game.physics.arcade.checkCollision.down = false;
+
+
+            textStyle = { font: "30px arial", fill: "#fff" };
+            scoreText = game.add.text(5, 50, "Points: 0", textStyle);
+            speedText = game.add.text(
+                game.world.width - 5,
+                5,
+                `Speed: ${fondoSpeed}`,
+                textStyle,
+            );
+            speedText.anchor.set(1, 0);
+
+            livesText = game.add.text(5, 5,
+                `Lives: ${lives}`,
+                textStyle,
+            );
+            lifeLostText = game.add.text(
+                game.world.width * 0.5,
+                game.world.height * 0.5,
+                "Life lost, click to continue",
+                textStyle,
+            );
+            lifeLostText.anchor.set(0.5);
+            lifeLostText.visible = false;
+
+            initBricks(); // Asegúrate de inicializar los ladrillos
+
+            // Configurar los controles del teclado
+            cursors = game.input.keyboard.createCursorKeys();
+        }
+
+        function update() {
+            game.physics.arcade.collide(paddle, bricks, paddleHitBrick, null, this);
+        
+            if (playing) {
+
+                // Mover la paleta (carro) según las teclas presionadas
+                if (cursors.left.isDown) {
+                    paddle.x -= 5; // Mover la paleta a la izquierda
+                } else if (cursors.right.isDown) {
+                    paddle.x += 5; // Mover la paleta a la derecha
+                }
+                if (cursors.up.isDown) {
+                    fondoSpeed += 0.05;
+                    paddle.y -= fondoSpeed; // Mover la paleta hacia arriba
+                } else if (cursors.down.isDown) {
+                    fondoSpeed -= 0.05;
+                    paddle.y += fondoSpeed; // Mover la paleta hacia abajo
+                }
+
+                // Asegurarse de que la paleta no se salga de los límites de la carretera
+                if (paddle.x < 200) {
+                    this.sfx.drift.play();
+                    paddle.x = 200; // Limitar a la izquierda
+                    paddle.angle += -15; // Girar la paleta hacia la derecha para simular derrape
+                } else if (paddle.x > 1700) {
+                    this.sfx.drift.play();
+                    paddle.x = 1700; // Limitar a la derecha
+                    paddle.angle += 15; // Girar la paleta hacia la izquierda para simular derrape
+                } else {
+                    paddle.angle = 0; // Restablecer el ángulo si está dentro de los límites de la carretera
+                }
+
+                if (paddle.y < 300) {
+                    paddle.y = 300; // Limitar arriba
+                } else if (paddle.y > 700) {
+                    paddle.y = 700; // Limitar arriba
+                }
+
+                // Mover los fondos hacia la abajo
+                fondo1.y += fondoSpeed;
+                fondo2.y += fondoSpeed;
+
+                // Reiniciar la posición de los fondos cuando salen de la pantalla
+                if (fondo1.y >= game.world.height) {
+                    fondo1.y = fondo2.y - fondo2.height; // Colocar fondo1 debajo de fondo2
+                }
+                if (fondo2.y >= game.world.height) {
+                    fondo2.y = fondo1.y - fondo1.height; // Colocar fondo2 debajo de fondo1
+                }
+                if (fondo1.y <= -fondo1.height) {
+                    fondo1.y = fondo2.y + fondo2.height; // Colocar fondo1 encima de fondo2
+                }
+                if (fondo2.y <= -fondo2.height) {
+                    fondo2.y = fondo1.y + fondo1.height; // Colocar fondo2 encima de fondo1
+                }
+            }
+            bricks.forEach(function (brick) {
+                // Si el ladrillo no está fuera de la pantalla, aplicar la gravedad
+                if (brick.y < game.world.height) {
+                    // Generar un número aleatorio entre 0 y 2
+                    const randomDirection = Math.floor(Math.random() * 300); // 0, 1 o 2
+
+                    // Decidir el movimiento
+                    if (randomDirection <= 15) {
+                        // Mover 100 píxeles a la izquierda
+                        brick.x -= 20;
+                    } else if (randomDirection > 15 && randomDirection <= 30) {
+                        // Mover 100 píxeles a la derecha
+                        brick.x += 20;
+                    }
+                    // Si randomDirection es 2, el ladrillo se queda en su posición
+                    if (brick.x < game.world.width/2) {
+                        // Aplicar gravedad
+                        brick.body.velocity.y += 2 * fondoSpeed; // Velocidad de caída
+                    } else {
+                        brick.body.velocity.y += -2 * fondoSpeed; // Velocidad de caída
+                    }
+                }
+                else {
+                    brick.kill(); // Destruir el ladrillo que ha llegado a la parte inferior
+                }
+            });
+            // Actualizar el texto de puntuación
+            scoreText.setText(`Points: ${score}`);
+            livesText.setText(`Lives: ${lives}`);
+
+            // Actualizar el texto de velocidad
+            speedText.setText(`Speed: ${Math.floor(fondoSpeed) * 10} Km/h`);
+        }
+
+        function initBricks() {
+            brickInfo = {
+                width: 50,
+                height: 20,
+                count: {
+                    row: 2,
+                    col: 50,
+                },
+                offset: {
+                    top: 50,
+                    left: 60,
+                },
+                padding: 10,
+            };
+            bricks = game.add.group();
+
+            // Función para crear un ladrillo en una posición aleatoria
+            function createRandomBrickdown() {
+                const brickX = (Math.random() * (game.world.width/2));
+                const brickY = Math.random() * (game.world.height - brickInfo.height - 900); // -50 para evitar que aparezcan en la parte superior
+
+                // Decidir el color del carro aleatoriamente
+                const colorChoice = Math.floor(Math.random() * 4); // 0, 1, 2 o 3 para elegir entre 4 colores
+                let carColor;
+
+                switch (colorChoice) {
+                    case 0:
+                        carColor = "carro1"; // Color amarillo
+                        break;
+                    case 1:
+                        carColor = "carro2"; // Color azul
+                        break;
+                    case 2:
+                        carColor = "carro3"; // Color rojo
+                        break;
+                    case 3:
+                        carColor = "carro4"; // Color rojo
+                        break;
+                }
+
+                // Crear el ladrillo
+                const newBrick = game.add.sprite(brickX, brickY, carColor); 
+                game.physics.enable(newBrick, Phaser.Physics.ARCADE);
+                newBrick.body.immovable = true;
+                newBrick.anchor.set(0.5);
+                score += 1; // Incrementar el contador de ladrillos
+                bricks.add(newBrick);
+            }
+            function createRandomBrickup() {
+                const brickX = game.world.width/2 + (Math.random() * (game.world.width/2));
+                const brickY = (game.world.height - brickInfo.height);
+
+                // Decidir el color del carro aleatoriamente
+                const colorChoice = Math.floor(Math.random() * 4); // 0, 1, 2 o 3 para elegir entre 4 colores
+                let carColor;
+
+                switch (colorChoice) {
+                    case 0:
+                        carColor = "carro1"; // Color amarillo
+                        break;
+                    case 1:
+                        carColor = "carro2"; // Color azul
+                        break;
+                    case 2:
+                        carColor = "carro3"; // Color rojo
+                        break;
+                    case 3:
+                        carColor = "carro4"; // Color rojo
+                        break;
+                }
+
+                // Crear el ladrillo
+                const newBrick = game.add.sprite(brickX, brickY, carColor); // Usa "alien" o "rock" aleatoriamente
+                game.physics.enable(newBrick, Phaser.Physics.ARCADE);
+                newBrick.body.immovable = true;
+                newBrick.anchor.set(0.5);
+                newBrick.angle = 180;
+
+                score += 1; // Incrementar el contador de ladrillos
+                bricks.add(newBrick);
+            }
+            // Crear un ladrillo inicial
+            createRandomBrickdown();
+            createRandomBrickup();
+            setInterval(createRandomBrickup, 500);
+            setInterval(createRandomBrickdown, 800);
+        }
+
+        function paddleHitBrick(paddle, brick) {
+            this.sfx.explosion.play();
+            if (lives > 0) {
+                if (paddle.x < brick.x) {
+                    brick.angle = -50;
+                    brick.body.velocity.x = fondoSpeed * 100;
+                    lives--;
+                } else {
+                    brick.angle = 50;
+                    brick.body.velocity.x = -fondoSpeed * 100;
+                    lives--;
+                }
+            }
+            else {
+                paddle.kill();
+                alert(`You survived ${score} cars, game over!`);
+                location.reload(); // Reiniciar el juego si no hay vidas restantes
+            }
+
+        }
+
+
+    </script>
+</body>
+
+</html>

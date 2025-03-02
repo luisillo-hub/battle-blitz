@@ -1,0 +1,391 @@
+<!doctype html>
+<html lang="en-US">
+
+<head>
+    <meta charset="utf-8" />
+    <title>SpaceShips</title>
+    <style></style>
+    <link rel="stylesheet" href="styles.css">
+    <script src="js/phaser.min.js"></script>
+</head>
+
+<body>
+    <nav>
+        <a href="index.html">Juegos.Com</a>
+        <a href="cars.html">CarCrash</a>
+        <a href="bricks.html">BrickBreaker</a>
+        <a href="spaceships.html">SpaceShips</a>
+        <a href="version mas actual idk/index2.html">SpiderAttack</a>
+        <a href="juego carros/cars.html">CarCrash2</a>
+        <a href="juego carros/titans.html">TitansJoyride</a>
+        <a href="plataformas - copia/index.html">BattleBlitz</a>
+        <a href="fling/index.html">MonkeyBananas</a>
+    </nav>
+
+    <script>
+        //ancho, alto de la pantalla
+        var game = new Phaser.Game(900, 540, Phaser.AUTO, null, {
+            preload: preload,
+            create: create,
+            update: update
+        });
+
+        var ball;
+        var fondo;
+        var fireball;
+        let fireballcount = 50;
+        let paddle;
+        let bricks;
+        let newBrick;
+        let brickInfo;
+        let scoreText;
+        let score = 0;
+        let lives = 5;
+        let fireballText;
+        let livesText;
+        let lifeLostText;
+        let playing = false;
+        let startButton;
+
+        function preload() {
+
+            game.scale.scaleMode = Phaser.ScaleManager.SHOW_ALL;
+            game.scale.pageAlignHorizontally = true;
+            game.scale.pageAlignVertically = true;
+            game.stage.backgroundColor = '#eee';
+
+            game.load.image('fondo', 'img/fondo.png');
+            game.load.image('space', 'img/space-station.png');
+            game.load.image("paddle", "img/big-ship.png");
+            game.load.image("nave", "img/nave.png");
+            game.load.image("ship", "img/ship.png");
+            game.load.image("rock", "img/rock.png");
+            game.load.image("alien", "img/alien.png");
+            game.load.spritesheet("naranja", "img/wobble2.png", 20, 20);
+            game.load.spritesheet("button", "img/button.png", 120, 40);
+            game.load.spritesheet("fireball", "img/Fireball.png", 120, 40);
+
+            game.load.audio('sfx:laser', 'audio/laser.mp3');
+            game.load.audio('sfx:explosion', 'audio/explosion.mp3');
+            game.load.audio('bgm', 'audio/bgm.mp3');
+            game.load.audio('ship', 'audio/ship.mp3');
+            game.load.audio('synth', 'audio/synth.mp3');
+            game.load.audio('engine', 'audio/engine.mp3');
+        }
+
+        function create() {
+            this.sfx = {
+                laser: this.game.add.audio('sfx:laser'),
+                explosion: this.game.add.audio('sfx:explosion'),
+            };
+            this.bgm = this.game.add.audio('bgm');
+            this.bgm.loopFull();
+            this.bgm.volume = 10;
+            this.ship = this.game.add.audio('ship');
+            this.ship.loopFull();
+            this.ship.volume = 1;
+            this.synth = this.game.add.audio('synth');
+            this.synth.loopFull();
+            this.synth.volume = 5;
+
+            game.physics.startSystem(Phaser.Physics.ARCADE);
+            fondo = game.add.sprite(0, 0, 'fondo');
+
+            // Crear la bola y establecer su sprite inicial
+            ball = game.add.sprite(game.world.width * 0.5, game.world.height - 25, 'nave');
+            ball.animations.add('wobble', [0, 1, 0, 2, 0, 1, 0, 2, 0], 24);
+            ball.anchor.set(0.5);
+
+            game.physics.enable(ball, Phaser.Physics.ARCADE);
+            ball.body.collideWorldBounds = true;
+            ball.body.bounce.set(1);
+
+            ship = game.add.sprite(game.world.width - 200, game.world.height - 200, 'ship');
+            ship.anchor.set(0.5);
+
+            game.physics.enable(ship, Phaser.Physics.ARCADE);
+
+            // Crear la paleta
+            paddle = game.add.sprite(
+                game.world.width * 0.5,
+                game.world.height - 5, // altura a la que está la paleta
+                "paddle",
+            );
+            paddle.anchor.set(0.5, 1);
+            game.physics.enable(paddle, Phaser.Physics.ARCADE);
+            paddle.body.immovable = true;
+            // game.physics.arcade.checkCollision.down = false;
+
+            textStyle = { font: "30px arial", fill: "#fff" };
+            scoreText = game.add.text(5, 5, "Points: 0", textStyle);
+            livesText = game.add.text(
+                game.world.width - 5,
+                5,
+                `Lives: ${lives}`,
+                textStyle,
+            );
+            livesText.anchor.set(1, 0);
+            lifeLostText = game.add.text(
+                game.world.width * 0.5,
+                game.world.height * 0.5,
+                "Life lost, click to continue",
+                textStyle,
+            );
+            lifeLostText.anchor.set(0.5);
+            lifeLostText.visible = false;
+
+            // Inicializar el grupo de bolas de fuego
+            fireballs = game.add.group();
+            fireballs.enableBody = true; // Habilitar la física para el grupo
+            fireballs.createMultiple(fireballcount, 'fireball'); // Crear 100 bolas de fuego
+            fireballs.setAll('anchor.x', 0.5);
+            fireballs.setAll('anchor.y', 0.5);
+            fireballs.setAll('outOfBoundsKill', true); // Destruir bolas de fuego que salgan de los límites
+            fireballText = game.add.text(5, 35, "Fireballs: 100", textStyle);
+            initBricks();
+
+            space = game.add.sprite(0, 0, 'space');
+            // Crear botones para iniciar el juego
+            startButton = game.add.button(
+                game.world.width * 0.5,
+                game.world.height * 0.5,
+                "button",
+                startGame,
+                this,
+                1,
+                0,
+                2,
+            );
+            startButton.anchor.set(0.5);
+            // Configurar los controles del teclado
+            cursors = game.input.keyboard.createCursorKeys();
+            keyW = game.input.keyboard.addKey(Phaser.Keyboard.W);
+            keyA = game.input.keyboard.addKey(Phaser.Keyboard.A);
+            keyS = game.input.keyboard.addKey(Phaser.Keyboard.S);
+            keyD = game.input.keyboard.addKey(Phaser.Keyboard.D);
+            keyF = game.input.keyboard.addKey(Phaser.Keyboard.F);
+            keySpace = game.input.keyboard.addKey(Phaser.Keyboard.SPACEBAR);
+
+            // Agregar un evento para disparar bolas de fuego
+            game.input.onDown.add(shootBall, this);
+            keySpace.onDown.add(shootPaddle, this);
+            keyF.onDown.add(shootFireball, this);
+        }
+
+        function shootFireball() {
+            // Disparar una bola de fuego
+            var fireball = fireballs.getFirstExists(false); // Obtener una bola de fuego que no esté en uso
+            fireballcount -= 1;
+            fireballText.setText('Fireballs:' + fireballcount);
+            if (fireball) {
+                fireball.reset(ship.x, ship.y - 50); // Colocar la bola de fuego en la posición de la bola principal
+                fireball.body.velocity.y = -300; // Establecer la velocidad de la bola de fuego hacia arriba
+                this.sfx.laser.play();
+                this.sfx.laser.volume = 0.8;
+            }
+
+        }
+
+        function shootPaddle() {
+            var paddleFireball = fireballs.getFirstExists(false); // Obtener otra bola de fuego que no esté en uso
+            fireballcount -= 1;
+            fireballText.setText('Fireballs:' + fireballcount);
+            if (paddleFireball) {
+                paddleFireball.reset(paddle.x, paddle.y - 100); // Colocar la bola de fuego en la posición de la paleta
+                paddleFireball.body.velocity.y = -300; // Establecer la velocidad de la bola de fuego hacia arriba
+                this.sfx.laser.play();
+
+            }
+        }
+
+        function shootBall() {
+            var ballFireball = fireballs.getFirstExists(false); // Obtener otra bola de fuego que no esté en uso
+            fireballcount -= 1;
+            if (ballFireball) {
+                ballFireball.reset(ball.x, ball.y - 20); // Colocar la bola de fuego en la posición de la paleta
+                ballFireball.body.velocity.y = -300; // Establecer la velocidad de la bola de fuego hacia arriba
+                this.sfx.laser.play();
+
+            }
+        }
+
+        function startGame() {
+            // Lógica para seleccionar el sprite de la bola 
+            // // Por ejemplo, podrías usar un prompt o un menú para elegir el sprite 
+            // let spriteChoice = prompt("Elige el color de la bola (azul o naranja):");
+            // if (spriteChoice === 'azul' || spriteChoice === 'naranja') {
+            //     ball.loadTexture(spriteChoice); // Cambiar el sprite de la bola
+            ball.body.velocity.set(150, -150); // Iniciar movimiento
+            playing = true;
+            startButton.destroy(); // Destruir el botón después de seleccionar
+            space.destroy();
+            // } 
+        }
+
+        function update() {
+            game.physics.arcade.collide(ball, bricks, shipHitBrick, null, this);
+            game.physics.arcade.collide(fireballs, bricks, fireballHitBrick, null, this);
+            game.physics.arcade.collide(ship, bricks, shipHitBrick, null, this);
+            game.physics.arcade.collide(paddle, bricks, shipHitBrick, null, this);
+
+            if (playing) {
+                ball.x = game.input.x || game.world.width * 0.5;
+                ball.y = game.input.y || game.world.height * 0.5;
+
+                if (keyW.isDown) {
+                    ship.y -= 5; // Mover la nave hacia arriba
+                }
+                else if (keyS.isDown) {
+                    ship.y += 5; // Mover la nave hacia abajo
+                }
+                if (keyA.isDown) {
+                    ship.x -= 5; // Mover la nave a la izquierda
+                }
+                else if (keyD.isDown) {
+                    ship.x += 5; // Mover la nave a la derecha
+                }
+                // Asegurarse de que la nave no se salga de los límites del juego
+                if (ship.x < 0) {
+                    ship.x = 0; // Limitar a la izquierda
+                } else if (ship.x > game.world.width) {
+                    ship.x = game.world.width; // Limitar a la derecha
+                }
+                if (ship.y < 0) {
+                    ship.y = 0; // Limitar arriba
+                } else if (ship.y > game.world.height) {
+                    ship.y = game.world.height; // Limitar abajo
+                }
+
+                if (cursors.left.isDown) {
+                    paddle.x -= 5; // Mover la paleta a la izquierda
+                } else if (cursors.right.isDown) {
+                    paddle.x += 5; // Mover la paleta a la derecha
+                }
+                if (cursors.up.isDown) {
+                    paddle.y -= 5; // Mover la paleta a la izquierda
+                } else if (cursors.down.isDown) {
+                    paddle.y += 5; // Mover la paleta a la derecha
+                }
+                // Asegurarse de que la paleta no se salga de los límites del juego
+                if (paddle.x < 0) {
+                    paddle.x = 0; // Limitar a la izquierda
+                } else if (paddle.x > game.world.width) {
+                    paddle.x = game.world.width; // Limitar a la derecha
+                }
+                if (paddle.y < 0) {
+                    paddle.y = 0; // Limitar arriba
+                } else if (paddle.y > game.world.height) {
+                    paddle.y = game.world.height; // Limitar abajo
+                }
+
+            }
+
+            bricks.forEach(function (brick) {
+                // Si el ladrillo no está fuera de la pantalla, aplicar la gravedad
+                if (brick.y < game.world.height) {
+                    brick.body.velocity.y = 30; // Velocidad de caída
+                    brick.body.velocity.x = 25;
+                } else {
+                    brick.kill(); // Destruir ladrillos que salgan de la pantalla
+                }
+            });
+        }
+
+        function initBricks() {
+            brickInfo = {
+                width: 50,
+                height: 20,
+                count: {
+                    row: 2,
+                    col: 50,
+                },
+                offset: {
+                    top: 50,
+                    left: 60,
+                },
+                padding: 10,
+            };
+            bricks = game.add.group();
+
+            // Función para crear un ladrillo en una posición aleatoria
+            function createRandomBrick() {
+                const brickX = Math.random() * (game.world.width - brickInfo.width);
+                const brickY = Math.random() * (game.world.height - brickInfo.height - 500); // -50 para evitar que aparezcan en la parte superior
+                const isLargeBrick = Math.random() < 0.3; // 30% de probabilidad de ser un ladrillo grande
+                const newBrick = game.add.sprite(brickX, brickY, isLargeBrick ? "alien" : "rock"); // Usa "largeRock" para ladrillos grandes
+                game.physics.enable(newBrick, Phaser.Physics.ARCADE);
+                newBrick.body.immovable = true;
+                newBrick.anchor.set(0.5);
+                // Inicializar el contador de impactos
+                newBrick.hitCount = 0; // Agregar esta línea para inicializar el contador
+                newBrick.maxHits = isLargeBrick ? 3 : 1; // Ladrillos grandes requieren más impactos
+
+                bricks.add(newBrick);
+            }
+
+            // Crear un ladrillo inicial
+            createRandomBrick();
+
+            // Crear un ladrillo cada 30 segundos
+            setInterval(createRandomBrick, 3000);
+        }
+
+        function fireballHitBrick(fireball, brick) {
+            // Incrementar el contador de impactos del ladrillo
+            brick.hitCount = (brick.hitCount || 0) + 1;
+            fireball.kill();
+
+            if (brick.hitCount >= brick.maxHits) {
+                // Crear una animación de destrucción para el ladrillo
+                this.sfx.explosion.play();
+                const killTween = game.add.tween(brick.scale);
+                killTween.to({ x: 0, y: 0 }, 200, Phaser.Easing.Linear.None);
+                killTween.onComplete.addOnce(function () {
+                    brick.kill();
+                }, this);
+                killTween.start();
+                fireball.kill();
+
+                // Aumentar el puntaje
+                score += 1; // Puedes ajustar el valor según tus necesidades
+                scoreText.setText('Points: ' + score);
+            }
+            // Verificar si se ha quedado sin bolas de fuego
+            if (fireballcount === 0) {
+                alert('You are out of fireballs!');
+                location.reload();
+            }
+
+        }
+
+        function shipHitBrick() {
+            this.sfx.explosion.play();
+            ship.kill(); // Hacer que la nave sea invisible
+            ball.kill();
+            paddle.kill();
+            lives--;
+
+            if (lives) {
+                livesText.setText(`Lives: ${lives}`);
+                lifeLostText.visible = true;
+
+                // Esperar un clic para reiniciar la nave
+                game.input.onDown.addOnce(() => {
+                    lifeLostText.visible = false;
+                    ship.reset(game.world.width * 0.5, game.world.height - 5); // Reaparecer la nave en la posición inicial
+                    ball.reset(game.world.width * 0.5, game.world.height - 25);
+                    paddle.reset(game.world.width * 0.5, game.world.height - 5);
+                    ship.visible = true; // Hacer que la nave sea visible nuevamente
+                    ball.visible = true;
+                    paddle.visible = true;
+                }, this);
+            } else {
+                alert("You lost, game over!");
+                location.reload();
+            }
+        }
+
+    </script>
+</body>
+
+</html>

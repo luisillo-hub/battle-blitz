@@ -1,0 +1,331 @@
+<!doctype html>
+<html lang="en-US">
+
+<head>
+    <meta charset="utf-8" />
+    <title>Titans-Joyride</title>
+    <style></style>
+    <link rel="stylesheet" href="styles.css">
+    <script src="js/phaser.min.js"></script>
+    <link rel="stylesheet" href="styles.css">
+</head>
+
+<body>
+   
+    <script>
+        //ancho, alto de la pantalla
+        var game = new Phaser.Game(2300, 1200, Phaser.AUTO, null, {
+            preload: preload,
+            create: create,
+            update: update
+        });
+
+        var fondo;
+
+        let paddle;
+        let newBrick;
+        let brickInfo;
+        let newCoin;
+        let newgoons;
+        let scoreText;
+        let score = 0;
+        let lives = 3;
+        let goonanim = 0;
+        let livesText;
+        let speedText;
+        let lifeLostText;
+        let playing = true;
+        let platform;
+
+        let fondo1, fondo2; // Variables para los fondos
+        let fondoSpeed = -5; // Velocidad de movimiento del fondo
+
+
+        function preload() {
+
+            game.scale.scaleMode = Phaser.ScaleManager.SHOW_ALL;
+            game.scale.pageAlignHorizontally = true;
+            game.scale.pageAlignVertically = true;
+            game.stage.backgroundColor = '#eee';
+
+            game.load.image('fondo', 'img/city.png');
+            game.load.image('line', 'img/start-line.png');
+            this.load.spritesheet('paddle', 'img/robin-sprites.png', 65, 65);
+            this.load.spritesheet('goons', 'img/cyborg.png', 84, 84);
+            this.load.spritesheet('goons2', 'img/Beast-Boy.png', 70, 61);
+            this.load.spritesheet('goons3', 'img/raven.png', 80, 76);
+            this.load.spritesheet('goons4', 'img/starfire.png', 80, 62);
+            game.load.image("misile", "img/misile.png");
+            game.load.image("laser", "img/laser-wall.png");
+            game.load.image("coin", "img/coin_icon.png");
+
+        }
+
+        function create() {
+
+            game.physics.startSystem(Phaser.Physics.ARCADE);
+            // Cargar las imágenes de fondo
+            fondo1 = game.add.sprite(0, 0, 'fondo');
+            fondo2 = game.add.sprite(fondo1.width, 0, 'fondo'); // Colocar el segundo fondo a la derecha del primero
+
+            // Configurar el fondo para que se mueva
+            fondo1.anchor.set(0, 0);
+            fondo2.anchor.set(0, 0);
+
+            // Crear el paddle
+            paddle = game.add.sprite(400, game.world.height - 105, 'paddle');
+            paddle.anchor.set(0.5, 1); // Establecer el ancla
+            paddle.scale.set(3);
+            initBricks(); // Asegúrate de inicializar los ladrillos
+            initCoins();
+            initGoons();
+            // Habilitar la física
+            game.physics.arcade.enable(paddle);
+            paddle.body.immovable = true;
+            paddle.gravity = true;
+            paddle.body.collideWorldBounds = true;
+            paddle.animations.add('run', [1, 2], 8, true); // 8fps looped
+            paddle.animations.add('jump', 0); // 8fps looped
+
+            textStyle = { font: "60px arial", fill: "#000" };
+            scoreText = game.add.text(5, 65, "Points: 0", textStyle);
+           
+            livesText = game.add.text(5, 5,
+                `Lives: ${lives}`,
+                textStyle,
+            );
+            lifeLostText = game.add.text(
+                game.world.width * 0.5,
+                game.world.height * 0.3,
+                "Life lost, click to continue",
+                textStyle,
+            );
+            lifeLostText.anchor.set(0.5);
+            lifeLostText.visible = false;
+            cursors = game.input.keyboard.createCursorKeys();
+        }
+
+        function update() {
+            game.physics.arcade.collide(paddle, bricks, paddleHitBrick, null, this);
+            game.physics.arcade.overlap(paddle, goons, paddleHitGoons, null, this);
+            game.physics.arcade.overlap(paddle, coins, paddleHitCoin, null, this);
+            paddle.animations.play('run');
+
+            // Mover la paleta (carro) según las teclas presionadas
+            if (cursors.left.isDown) {
+                paddle.x -= 5; // Mover la paleta a la izquierda
+            } else if (cursors.right.isDown) {
+                paddle.x += 5; // Mover la paleta a la derecha
+            }
+            if (cursors.up.isDown) {
+                paddle.y -= 5; // Mover la paleta hacia arriba
+                paddle.animations.stop();
+                paddle.animations.play('jump');
+            } else {
+                paddle.y += 10; // Mover la paleta hacia abajo
+
+            }
+
+            // Aquí puedes agregar lógica adicional, como límites de pantalla
+            if (paddle.y > game.world.height - 200) {
+                paddle.y = game.world.height - 200; // Evitar que el jugador se salga de la pantalla
+            } else if (paddle.y < 0) {
+                paddle.y = 0; // Evitar que el jugador se salga de la pantalla
+            }
+            // Mover los fondos hacia la abajo
+            fondo1.x += fondoSpeed;
+            fondo2.x += fondoSpeed;
+
+            // Reiniciar la posición de los fondos cuando salen de la pantalla
+            if (fondo1.x >= game.world.width) {
+                fondo1.x = fondo2.x - fondo2.width; // Colocar fondo1 debajo de fondo2
+            }
+            if (fondo2.x >= game.world.width) {
+                fondo2.x = fondo1.x - fondo1.width; // Colocar fondo2 debajo de fondo1
+            }
+            if (fondo1.x <= -fondo1.width) {
+                fondo1.x = fondo2.x + fondo2.width; // Colocar fondo1 encima de fondo2
+            }
+            if (fondo2.x <= -fondo2.width) {
+                fondo2.x = fondo1.x + fondo1.width; // Colocar fondo2 encima de fondo1
+            }
+
+            bricks.forEach(function (brick) {
+                // Si el ladrillo no está fuera de la pantalla, aplicar la gravedad
+                if (brick.x > 0) {
+                    // Mover 100 píxeles a la izquierda
+                    brick.x -= 10;
+                }
+                else {
+                    brick.kill(); // Destruir el ladrillo que ha llegado a la parte inferior
+                }
+            });
+            coins.forEach(function (coin) {
+                if (coin.x > 0) {
+                    // Mover 100 píxeles a la izquierda
+                    coin.x -= 10;
+                }
+                else {
+                    coin.kill(); // Destruir el ladrillo que ha llegado a la parte inferior
+                }
+            });
+            goons.forEach(function (goon) {
+                if (goon.x > 0) {
+                    // Mover 100 píxeles a la izquierda
+                    goon.x -= 10;
+                    goon.animations.play('run');
+                   
+                }
+                else {
+                    goon.kill(); // Destruir el ladrillo que ha llegado a la parte inferior
+                }
+            });
+            // Actualizar el texto de puntuación
+            scoreText.setText(`Points: ${score}`);
+
+            livesText.setText(`Lives: ${lives}`);
+
+          
+        }
+
+        function initBricks() {
+            brickInfo = {
+                width: 100,
+                height: 100,
+                count: {
+                    row: 2,
+                    col: 50,
+                },
+                offset: {
+                    top: 50,
+                    left: 60,
+                },
+                padding: 10,
+            };
+            bricks = game.add.group();
+
+            // Función para crear un ladrillo en una posición aleatoria
+            function createRandomBrickright() {
+                const brickX = ((game.world.width));
+                const brickY = Math.random() * (game.world.height - brickInfo.height); // -50 para evitar que aparezcan en la parte superior
+
+                // Decidir el color del carro aleatoriamente
+                const colorChoice = Math.floor(Math.random() * 2); // 0, 1, 2 o 3 para elegir entre 4 colores
+                let carColor;
+
+                switch (colorChoice) {
+                    case 0:
+                        carColor = "misile"; // Color amarillo
+                        break;
+                    case 1:
+                        carColor = "laser"; // Color azul
+                        break;
+
+                }
+
+                // Crear el ladrillo
+                const newBrick = game.add.sprite(brickX, brickY, carColor);
+                game.physics.enable(newBrick, Phaser.Physics.ARCADE);
+                newBrick.body.immovable = true;
+                newBrick.anchor.set(0.5);
+                newBrick.scale.set(3);
+                bricks.add(newBrick);
+            }
+
+            // Crear un ladrillo inicial
+            createRandomBrickright();
+            setInterval(createRandomBrickright, 3500);
+        }
+        function initCoins() {
+            coins = game.add.group();
+            coins.enableBody = true; // Habilitar la física para el grupo de monedas
+
+            // Función para crear una moneda en una posición aleatoria
+            function createRandomCoin() {
+                const coinX = (game.world.width);
+                const coinY = Math.random() * (game.world.height - 300); // -300 para evitar que aparezcan en la parte superior
+
+                // Crear la moneda
+                const newCoin = coins.create(coinX, coinY, "coin");
+                newCoin.body.immovable = true; // Hacer que la moneda sea inmóvil
+                newCoin.anchor.set(0.5);
+                newCoin.scale.set(2);
+            }
+
+            // Crear una moneda inicial
+            createRandomCoin();
+            setInterval(createRandomCoin, 1500); // Crear monedas cada 500 ms
+        }
+        function initGoons() {
+            goons = game.add.group();
+            goons.enableBody = true; // Habilitar la física para el grupo de monedas
+
+            // Función para crear una moneda en una posición aleatoria
+            function createRandomGoons() {
+                const goonsX = (game.world.width);
+                const goonsY = (game.world.height - 300); // -300 para evitar que aparezcan en la parte superior
+                // Decidir el color del carro aleatoriamente
+                const colorChoice = Math.floor(Math.random() * 4); // 0, 1, 2 o 3 para elegir entre 4 colores
+                let goonColor;
+
+                switch (colorChoice) {
+                    case 0:
+                        goonColor = 'goons';
+                        break;
+                    case 1:
+                        goonColor = 'goons2';
+                        break;
+                    case 2:
+                        goonColor = 'goons3';
+                        break;
+                    case 3:
+                        goonColor = 'goons4';
+                        break;
+                }
+                // Crear la moneda
+                const newgoons = goons.create(goonsX, goonsY, goonColor);
+                newgoons.body.immovable = true; // Hacer que la moneda sea inmóvil
+                newgoons.anchor.set(0.5);
+                newgoons.scale.set(3);
+                newgoons.animations.add('run', [1, 0], 8, true); // 8fps looped
+                newgoons.animations.add('die', [2,2,2,2,2,2],8); 
+            }
+
+            // Crear una moneda inicial
+            createRandomGoons();
+            setInterval(createRandomGoons, 4500); // Crear monedas cada 500 ms
+        }
+        function paddleHitBrick(paddle, brick) {
+            if (lives > 0) {
+                lives--;
+                brick.kill();
+                paddle.body.enable = false;
+                livesText.setText(`Lives: ${lives}`);
+                lifeLostText.visible = true;
+            
+                game.input.onDown.addOnce(() => {
+                    lifeLostText.visible = false;
+                    paddle.body.enable=true;
+                }, this);
+            } else {
+                paddle.kill();
+                alert(`You got ${score} coins, game over!`);
+                location.reload(); // Reiniciar el juego si no hay vidas restantes
+            }
+
+        }
+        function paddleHitCoin(paddle, coins) {
+            if (lives > 0) {
+                score++; // Incrementar el contador de ladrillos
+                coins.kill();
+            }
+
+        }
+        function paddleHitGoons(paddle, goons) {
+            goons.animations.play('die');
+         
+        }
+    </script>
+</body>
+
+</html>
