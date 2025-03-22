@@ -138,7 +138,8 @@
             keyD = game.input.keyboard.addKey(Phaser.Keyboard.D);
             keyF = game.input.keyboard.addKey(Phaser.Keyboard.F);
             keySpace = game.input.keyboard.addKey(Phaser.Keyboard.SPACEBAR);
-            click = game.input.addkey(Phaser.input);
+            // Agregar un evento para disparar bolas de fuego
+            game.input.onDown.add(shootBall, this);
         }
 
         function startGame() {
