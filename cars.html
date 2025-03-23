@@ -150,10 +150,10 @@
             game.physics.arcade.collide(paddle, bricks, paddleHitBrick, null, this);
 
             if (playing) {
-
+                ball.x = game.input.x || game.world.width * 0.5;
+                ball.y = game.input.y || game.world.height * 0.5;
                 // Mover la paleta (carro) según las teclas presionadas
                 if (cursors.left.isDown) {
-
                     paddle.x -= 5; // Mover la paleta a la izquierda
                 } else if (cursors.right.isDown) {
 
