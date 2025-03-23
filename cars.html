@@ -48,7 +48,7 @@
         let playing = true;
 
         let fondo1, fondo2; // Variables para los fondos
-        let fondoSpeed = 0; // Velocidad de movimiento del fondo
+        let fondoSpeed = 5; // Velocidad de movimiento del fondo
 
         function preload() {
 
@@ -159,6 +159,12 @@
 
                     paddle.x += 5; // Mover la paleta a la derecha
                 }
+                if (game.input.onDown) => { 
+                    fondoSpeed += 0.1;
+                    paddle.y -= fondoSpeed; // Mover la paleta hacia arriba
+                    line.kill();
+                    }
+                
                 if (cursors.up.isDown) {
                     fondoSpeed += 0.1;
                     paddle.y -= fondoSpeed; // Mover la paleta hacia arriba
