@@ -33,7 +33,10 @@
 
 
         var fondo;
-
+        var ball;
+        
+        var fireball;
+        let fireballcount = 50;
         let paddle;
         let bricks;
         let newBrick;
@@ -63,8 +66,8 @@
 
             game.load.image("rock", "img/carro2.png");
             game.load.image("alien", "img/carro3.png");
-
-
+            game.load.spritesheet("fireball", "img/Fireball.png", 120, 40);
+            game.load.spritesheet("naranja", "img/wobble2.png", 20, 20);
             game.load.audio('sfx:drift', 'audio/drift.mp3');
             game.load.audio('sfx:explosion', 'audio/explosion.mp3');
             game.load.audio('bgm', 'audio/fightscene.mp3');
@@ -92,7 +95,14 @@
             // Configurar el fondo para que se mueva
             fondo1.anchor.set(0, 0);
             fondo2.anchor.set(0, 0);
+            // Crear la bola y establecer su sprite inicial
+            ball = game.add.sprite(game.world.width * 0.5, game.world.height - 25, 'nave');
+            ball.animations.add("naranja", [0, 1, 0, 2, 0, 1, 0, 2, 0], 24);
+            ball.anchor.set(0.5);
 
+            game.physics.enable(ball, Phaser.Physics.ARCADE);
+            ball.body.collideWorldBounds = true;
+            ball.body.bounce.set(1);
             // Crear la paleta
             paddle = game.add.sprite(
                 game.world.width * 0.5,
@@ -284,6 +294,25 @@
         function paddleHitBrick(paddle, brick) {
             this.sfx.explosion.play();
             if(lives > 0){
+                livesText.setText(`Lives: ${lives}`);
+                lifeLostText.visible = true;
+
+                // Esperar un clic para reiniciar la nave
+                game.input.onDown.addOnce(() => {
+                    lifeLostText.visible = false;
+                    ship.reset(game.world.width * 0.5, game.world.height - 5); // Reaparecer la nave en la posición inicial
+                    ball.reset(game.world.width * 0.5, game.world.height - 25);
+                    paddle.reset(game.world.width * 0.5, game.world.height - 5);
+                    ship.visible = true; // Hacer que la nave sea visible nuevamente
+                    ball.visible = true;
+                    paddle.visible = true;
+                }, this);
+            } else {
+                alert("You lost, game over!");
+                location.reload();
+            }
+        
+
             if(paddle.x < brick.x){
                 brick.angle = -50;
                 brick.body.velocity.x = fondoSpeed*100;
