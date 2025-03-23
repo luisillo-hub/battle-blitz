@@ -124,7 +124,8 @@
         }
 
         function update() {
-            if (playing) { 
+            if (playing) {
+                // Hacer que la pelota siga el movimiento del mouse
                 ball.x = game.input.x || game.world.width * 0.5;
                 ball.y = game.input.y || game.world.height * 0.5;
 
@@ -133,9 +134,14 @@
                     paddle.x -= 5;
                 } else if (cursors.right.isDown) {
                     paddle.x += 5;
-                }else if (cursors.up.isDown) {
-                    paddle.y -= 5; // Mover la nave hacia arriba
+                } else if (cursors.up.isDown) {
+                    paddle.y -= 5; // Mover la paleta hacia arriba
+                } else if (cursors.down.isDown) {
+                    paddle.y += 5; // Mover la paleta hacia abajo
                 }
+
+                // Limitar movimiento de la paleta
+                if (paddle.x < 200) {
                     paddle.x = 200;
                     paddle.angle = -15;
                     this.sfx.drift.play();
@@ -145,6 +151,13 @@
                     this.sfx.drift.play();
                 } else {
                     paddle.angle = 0;
+                }
+
+                // Limitar movimiento vertical de la paleta
+                if (paddle.y < 200) {
+                    paddle.y = 200;
+                } else if (paddle.y > game.world.height - 50) {
+                    paddle.y = game.world.height - 50;
                 }
 
                 // Mover fondos
