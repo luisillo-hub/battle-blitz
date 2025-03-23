@@ -54,7 +54,7 @@
             game.load.image("rock", "img/carro2.png");
             game.load.image("alien", "img/carro3.png");
             game.load.spritesheet("fireball", "img/Fireball.png", 120, 40);
-            game.load.image("ball", "img/ship.png", 20, 20);
+            game.load.image("ball", "img/ship.png");
             game.load.audio('sfx:drift', 'audio/drift.mp3');
             game.load.audio('sfx:explosion', 'audio/explosion.mp3');
             game.load.audio('bgm', 'audio/fightscene.mp3');
@@ -89,7 +89,7 @@
             ball.body.bounce.set(1);
 
             // Paleta (carro)
-            paddle = c
+            paddle = game.add.sprite(game.world.width * 0.5, game.world.height - 5, "paddle");
             paddle.anchor.set(0.5, 1);
             game.physics.enable(paddle, Phaser.Physics.ARCADE);
             paddle.body.immovable = true;
