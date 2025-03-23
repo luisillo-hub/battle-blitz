@@ -1,0 +1,162 @@
+<!doctype html>
+<html lang="en-US">
+
+<head>
+    <meta charset="utf-8" />
+    <title>Esquiva Obstáculos</title>
+    <style>
+    </style>
+    <script src="js/phaser.min.js"></script>
+    <link rel="stylesheet" href="styles.css">
+</head>
+
+<body>
+    <script>
+        // Configuración del juego
+        var game = new Phaser.Game(960, 540, Phaser.AUTO, null, {
+            preload: preload,
+            create: create,
+            update: update
+        });
+
+        // Variables globales
+        var fondo1, fondo2;
+        var fondoSpeed = 5;
+        var player;
+        var obstacles;
+        var score = 0;
+        var lives = 3;
+        var cursors;
+        var scoreText, livesText;
+
+        function preload() {
+            game.scale.scaleMode = Phaser.ScaleManager.SHOW_ALL;
+            game.scale.pageAlignHorizontally = true;
+            game.scale.pageAlignVertically = true;
+            game.stage.backgroundColor = '#eee';
+
+            // Cargar recursos
+            game.load.image('fondo', 'img/highway.png');
+            game.load.image('player', 'img/carro1.png');
+            game.load.image('obstacle1', 'img/carro2.png');
+            game.load.image('obstacle2', 'img/carro3.png');
+            game.load.audio('sfx:drift', 'audio/drift.mp3');
+            game.load.audio('sfx:crash', 'audio/explosion.mp3');
+            game.load.audio('bgm', 'audio/fightscene.mp3');
+        }
+
+        function create() {
+            // Inicializar sonidos
+            this.sfx = {
+                drift: game.add.audio('sfx:drift'),
+                crash: game.add.audio('sfx:crash'),
+            };
+            this.bgm = game.add.audio('bgm');
+            this.bgm.loopFull();
+            this.bgm.volume = 3;
+
+            // Inicializar física
+            game.physics.startSystem(Phaser.Physics.ARCADE);
+
+            // Fondos
+            fondo1 = game.add.sprite(0, 0, 'fondo');
+            fondo2 = game.add.sprite(0, fondo1.height, 'fondo');
+
+            // Jugador (carro)
+            player = game.add.sprite(game.world.width * 0.5, game.world.height - 100, 'player');
+            player.anchor.set(0.5);
+            game.physics.enable(player, Phaser.Physics.ARCADE);
+            player.body.collideWorldBounds = true;
+
+            // Obstáculos
+            obstacles = game.add.group();
+            obstacles.enableBody = true;
+            obstacles.physicsBodyType = Phaser.Physics.ARCADE;
+
+            // Textos
+            var textStyle = { font: "30px Arial", fill: "#fff" };
+            scoreText = game.add.text(5, 5, `Score: ${score}`, textStyle);
+            livesText = game.add.text(game.world.width - 5, 5, `Lives: ${lives}`, textStyle);
+            livesText.anchor.set(1, 0);
+
+            // Controles
+            cursors = game.input.keyboard.createCursorKeys();
+
+            // Crear obstáculos cada 2 segundos
+            game.time.events.loop(2000, spawnObstacle, this);
+        }
+
+        function update() {
+            // Mover fondos
+            fondo1.y += fondoSpeed;
+            fondo2.y += fondoSpeed;
+
+            // Reiniciar fondos
+            if (fondo1.y >= game.world.height) {
+                fondo1.y = fondo2.y - fondo2.height;
+            }
+            if (fondo2.y >= game.world.height) {
+                fondo2.y = fondo1.y - fondo1.height;
+            }
+
+            // Mover jugador
+            if (cursors.left.isDown) {
+                player.x -= 5;
+            } else if (cursors.right.isDown) {
+                player.x += 5;
+            }
+
+            // Limitar movimiento del jugador
+            if (player.x < 200) {
+                player.x = 200;
+            } else if (player.x > 760) {
+                player.x = 760;
+            }
+
+            // Verificar colisiones entre jugador y obstáculos
+            game.physics.arcade.overlap(player, obstacles, crash, null, this);
+
+            // Mover obstáculos
+            obstacles.forEach(function (obstacle) {
+                obstacle.y += fondoSpeed;
+
+                // Eliminar obstáculos que salen de la pantalla
+                if (obstacle.y > game.world.height) {
+                    obstacle.kill();
+                    score += 10; // Aumentar puntuación
+                    scoreText.setText(`Score: ${score}`);
+                }
+            });
+        }
+
+        function spawnObstacle() {
+            // Crear un obstáculo en una posición aleatoria
+            var obstacle = obstacles.create(Math.random() * (760 - 200) + 200, -50, Math.random() < 0.5 ? 'obstacle1' : 'obstacle2');
+            obstacle.anchor.set(0.5);
+            game.physics.enable(obstacle, Phaser.Physics.ARCADE);
+            obstacle.body.velocity.y = fondoSpeed * 10;
+        }
+
+        function crash(player, obstacle) {
+            this.sfx.crash.play();
+            lives--;
+            livesText.setText(`Lives: ${lives}`);
+
+            // Eliminar el obstáculo
+            obstacle.kill();
+
+            // Verificar si el jugador perdió
+            if (lives === 0) {
+                gameOver();
+            }
+        }
+
+        function gameOver() {
+            this.bgm.stop();
+            alert(`Game Over! Your score: ${score}`);
+            location.reload();
+        }
+    </script>
+</body>
+
+</html>
